@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -104,6 +105,16 @@ function LoginPageContent() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={150}
+              height={150}
+              priority
+              className="object-contain"
+            />
+          </div>
           <h1 className="text-2xl font-bold text-center">Iniciar Sesión</h1>
           <p className="text-center text-gray-600 text-sm">
             Accede a tu cuenta de administrador
@@ -168,9 +179,9 @@ function LoginPageContent() {
           </Form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-brand-text-muted">
             ¿No tienes cuenta?{' '}
-            <Link href="/register" className="text-blue-600 hover:underline font-medium">
+            <Link href="/register" className="text-brand-accent hover:underline font-medium">
               Regístrate
             </Link>
           </p>

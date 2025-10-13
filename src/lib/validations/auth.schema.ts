@@ -6,6 +6,10 @@ export const registerSchema = z
       .string()
       .min(1, 'Campo de Nombre obligatorio')
       .max(50, 'Nombre debe tener máximo 50 caracteres'),
+    apellido: z
+      .string()
+      .min(1, 'Campo de Apellido obligatorio')
+      .max(50, 'Apellido debe tener máximo 50 caracteres'),
     correo: z
       .string()
       .min(1, 'Campo de Correo obligatorio')

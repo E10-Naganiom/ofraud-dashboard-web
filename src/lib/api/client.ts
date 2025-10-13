@@ -25,11 +25,19 @@ export const api: AxiosInstance = axios.create({
   timeout: 30000, // 30 second timeout
 });
 
+// Enable mock mode (set to false to use real backend authentication)
+const USE_MOCK_AUTH = true;
+
 /**
  * Request Interceptor: Add JWT token to Authorization header
  */
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Skip authentication in mock mode
+    if (USE_MOCK_AUTH) {
+      return config;
+    }
+
     // Check if we're in browser environment (not SSR)
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
@@ -63,17 +71,20 @@ api.interceptors.response.use(
       // Handle specific HTTP status codes
       switch (status) {
         case 401: {
-          // Unauthorized - clear token and redirect to login
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem(AUTH_TOKEN_KEY);
+          // Skip redirect in mock mode
+          if (!USE_MOCK_AUTH) {
+            // Unauthorized - clear token and redirect to login
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(AUTH_TOKEN_KEY);
 
-            // Get current path for redirect after login
-            const currentPath = window.location.pathname;
-            const returnTo =
-              currentPath !== '/login' ? `?returnTo=${currentPath}` : '';
+              // Get current path for redirect after login
+              const currentPath = window.location.pathname;
+              const returnTo =
+                currentPath !== '/login' ? `?returnTo=${currentPath}` : '';
 
-            // Redirect to login page
-            window.location.href = `/login${returnTo}`;
+              // Redirect to login page
+              window.location.href = `/login${returnTo}`;
+            }
           }
 
           // Override error message

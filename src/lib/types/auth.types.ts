@@ -8,6 +8,7 @@
  */
 export interface RegisterAdminRequest {
   nombre: string;
+  apellido: string;
   correo: string;
   contrasena: string;
 }
@@ -18,6 +19,7 @@ export interface RegisterAdminRequest {
 export interface RegisterAdminResponse {
   id: string;
   nombre: string;
+  apellido: string;
   correo: string;
   is_admin: boolean;
 }
@@ -38,6 +40,7 @@ export interface LoginAdminResponse {
   user: {
     id: string;
     nombre: string;
+    apellido: string;
     correo: string;
     is_admin: boolean;
   };
@@ -49,6 +52,7 @@ export interface LoginAdminResponse {
 export interface AuthUser {
   id: string;
   nombre: string;
+  apellido: string;
   correo: string;
   is_admin: boolean;
 }

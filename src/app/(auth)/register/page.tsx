@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ export default function RegisterPage() {
     mode: 'onChange',
     defaultValues: {
       nombre: '',
+      apellido: '',
       correo: '',
       contrasena: '',
       confirmacionContrasena: '',
@@ -100,6 +102,16 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={150}
+              height={150}
+              priority
+              className="object-contain"
+            />
+          </div>
           <h1 className="text-2xl font-bold text-center">Registro de Administrador</h1>
           <p className="text-center text-gray-600 text-sm">
             Crea tu cuenta de administrador
@@ -116,7 +128,25 @@ export default function RegisterPage() {
                     <FormLabel>Nombre</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="Juan Pérez"
+                        placeholder="Juan"
+                        disabled={isSubmitting}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="apellido"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Apellido</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Pérez"
                         disabled={isSubmitting}
                         {...field}
                       />
@@ -201,9 +231,9 @@ export default function RegisterPage() {
           </Form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-brand-text-muted">
             ¿Ya tienes cuenta?{' '}
-            <Link href="/login" className="text-blue-600 hover:underline font-medium">
+            <Link href="/login" className="text-brand-accent hover:underline font-medium">
               Inicia sesión
             </Link>
           </p>
