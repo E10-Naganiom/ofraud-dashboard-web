@@ -5,10 +5,6 @@
 
 import { api } from '@/lib/api/client';
 import type { Incident, IncidentDetail } from '@/lib/types/incident.types';
-import { mockIncidents, getMockIncidentById } from '@/lib/mock/data';
-
-// Enable mock mode (set to false to use real backend)
-const USE_MOCK_DATA = true;
 
 /**
  * Fetch all incidents from the backend
@@ -16,15 +12,14 @@ const USE_MOCK_DATA = true;
  * @throws Error if API call fails
  */
 export async function getIncidents(): Promise<Incident[]> {
-  if (USE_MOCK_DATA) {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockIncidents;
-  }
-
   try {
     const response = await api.get<Incident[]>('/admin/incidents/list');
-    return response.data;
+    return response.data.map(incident => ({
+      ...incident,
+      // Map backend fields to frontend expected structure
+      correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
+      es_anonimo: Boolean(incident.es_anonimo),
+    }));
   } catch (error) {
     console.error('Failed to fetch incidents:', error);
     throw error;
@@ -38,19 +33,25 @@ export async function getIncidents(): Promise<Incident[]> {
  * @throws Error if API call fails (e.g., 404 Not Found)
  */
 export async function getIncidentById(id: string): Promise<IncidentDetail> {
-  if (USE_MOCK_DATA) {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const incident = getMockIncidentById(id);
-    if (!incident) {
-      throw new Error(`Incident with ID ${id} not found`);
-    }
-    return incident;
-  }
-
   try {
     const response = await api.get<IncidentDetail>(`/admin/incidents/${id}`);
-    return response.data;
+    
+    // Map backend response to frontend structure
+    const incident = response.data;
+    
+    return {
+      ...incident,
+      es_anonimo: Boolean(incident.es_anonimo),
+      // Ensure nested objects are properly structured
+      usuario: incident.usuario || {
+        id: String(incident.id_usuario),
+        nombre: '',
+        apellido: '',
+        correo_electronico: '',
+      },
+      supervisor: incident.supervisor || null,
+      evidencia: incident.evidencia || incident.evidencias || [],
+    };
   } catch (error) {
     console.error(`Failed to fetch incident with ID ${id}:`, error);
     throw error;
@@ -60,23 +61,25 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
 /**
  * Evaluates an incident by updating its status.
  * @param id The ID of the incident to evaluate.
- * @param statusId The new status ID for the incident.
+ * @param statusId The new status ID for the incident (1=Pendiente, 2=Aprobado, 3=Rechazado).
+ * @param supervisorId Optional supervisor ID to assign.
  * @returns Promise resolving to void.
  * @throws Error if API call fails.
  */
-export async function evaluateIncident(id: string, statusId: number, supervisorId?: string | null): Promise<void> {
-  if (USE_MOCK_DATA) {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    console.log(`Mock: Evaluating incident ${id} with status ${statusId} and supervisor ${supervisorId}`);
-    return;
-  }
-
+export async function evaluateIncident(
+  id: string, 
+  statusId: number, 
+  supervisorId?: string | null
+): Promise<void> {
   try {
-    const payload: { id_estatus: number; supervisor?: string | null } = { id_estatus: statusId };
+    const payload: { id_estatus: number; supervisor?: string | null } = { 
+      id_estatus: statusId 
+    };
+    
     if (supervisorId !== undefined) {
-      payload.supervisor = supervisorId;
+      payload.supervisor = supervisorId ? Number(supervisorId) : null;
     }
+    
     await api.patch(`/admin/incidents/${id}/evaluate`, payload);
   } catch (error) {
     console.error(`Failed to evaluate incident with ID ${id}:`, error);
@@ -89,15 +92,13 @@ export async function evaluateIncident(id: string, statusId: number, supervisorI
  * @returns Promise resolving to array of pending incidents.
  */
 export async function getPendingIncidents(): Promise<Incident[]> {
-  if (USE_MOCK_DATA) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockIncidents.filter(
-      (incident) => incident.id_estatus === 1 // IncidentStatus.Pendiente
-    );
-  }
   try {
     const response = await api.get<Incident[]>('/admin/incidents/list/pending');
-    return response.data;
+    return response.data.map(incident => ({
+      ...incident,
+      correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
+      es_anonimo: Boolean(incident.es_anonimo),
+    }));
   } catch (error) {
     console.error('Failed to fetch pending incidents:', error);
     throw error;
@@ -109,15 +110,13 @@ export async function getPendingIncidents(): Promise<Incident[]> {
  * @returns Promise resolving to array of approved incidents.
  */
 export async function getApprovedIncidents(): Promise<Incident[]> {
-  if (USE_MOCK_DATA) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockIncidents.filter(
-      (incident) => incident.id_estatus === 2 // IncidentStatus.Aprobado
-    );
-  }
   try {
     const response = await api.get<Incident[]>('/admin/incidents/list/approved');
-    return response.data;
+    return response.data.map(incident => ({
+      ...incident,
+      correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
+      es_anonimo: Boolean(incident.es_anonimo),
+    }));
   } catch (error) {
     console.error('Failed to fetch approved incidents:', error);
     throw error;
@@ -129,15 +128,13 @@ export async function getApprovedIncidents(): Promise<Incident[]> {
  * @returns Promise resolving to array of rejected incidents.
  */
 export async function getRejectedIncidents(): Promise<Incident[]> {
-  if (USE_MOCK_DATA) {
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockIncidents.filter(
-      (incident) => incident.id_estatus === 3 // IncidentStatus.Rechazado
-    );
-  }
   try {
     const response = await api.get<Incident[]>('/admin/incidents/list/rejected');
-    return response.data;
+    return response.data.map(incident => ({
+      ...incident,
+      correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
+      es_anonimo: Boolean(incident.es_anonimo),
+    }));
   } catch (error) {
     console.error('Failed to fetch rejected incidents:', error);
     throw error;
