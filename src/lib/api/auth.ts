@@ -11,41 +11,48 @@ import type {
   LoginAdminResponse,
 } from '@/lib/types/auth.types';
 
-// Enable mock mode (set to false to use real backend)
-const USE_MOCK_AUTH = true;
-
 /**
  * Register a new admin user
- * @param data - Registration form data (nombre, correo, contrasena)
+ * @param data - Registration form data (nombre, apellido, correo, contrasena)
  * @returns Promise with registered user data
  * @throws Error if registration fails
  */
 export async function registerAdmin(
   data: RegisterAdminRequest
 ): Promise<RegisterAdminResponse> {
-  if (USE_MOCK_AUTH) {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log('Mock: Registering admin', data);
-    return {
-      id: '1',
-      nombre: data.nombre,
-      apellido: data.apellido,
-      correo: data.correo,
-      is_admin: true,
-    };
-  }
-
   try {
+    // Map frontend fields to backend expected fields
+    const payload = {
+      email: data.correo,
+      name: data.nombre,
+      apellido: data.apellido,
+      password: data.contrasena,
+      is_admin: true, // Always create as admin
+      is_active: true,
+    };
+
     const response = await api.post<RegisterAdminResponse>(
-      '/auth/register',
-      data
+      '/users',
+      payload
     );
-    return response.data;
-  } catch (error) {
-    // Re-throw error after logging for debugging
+
+    // Map backend response to frontend expected structure
+    return {
+      id: String(response.data.id),
+      nombre: response.data.nombre,
+      apellido: response.data.apellido,
+      correo: response.data.correo_electronico || response.data.email,
+      is_admin: response.data.is_admin || response.data.es_admin,
+    };
+  } catch (error: any) {
     console.error('Registration failed:', error);
-    throw error;
+    
+    // Handle specific error cases
+    if (error.response?.status === 409) {
+      throw new Error('Ya existe una cuenta con este correo');
+    }
+    
+    throw new Error(error.message || 'Error al registrar el usuario');
   }
 }
 
@@ -53,36 +60,66 @@ export async function registerAdmin(
  * Login admin user
  * @param data - Login credentials (correo, contrasena)
  * @returns Promise with JWT token and user data
- * @throws Error if login fails
+ * @throws Error if login fails or user is not admin
  */
 export async function loginAdmin(
   data: LoginAdminRequest
 ): Promise<LoginAdminResponse> {
-  if (USE_MOCK_AUTH) {
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    console.log('Mock: Logging in admin', data);
+  try {
+    // Map frontend fields to backend expected fields
+    const payload = {
+      email: data.correo,
+      password: data.contrasena,
+    };
 
-    // Return mock successful login
+    const response = await api.post<{
+      access_token: string;
+      refresh_token: string;
+    }>('/auth/login', payload);
+
+    // Extract token and decode to get user info
+    const token = response.data.access_token;
+
+    // Get user profile using the token
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    const profileResponse = await api.get<{ profile: any }>('/auth/profile');
+    
+    const userProfile = profileResponse.data.profile;
+
+    console.log('User profile received:', userProfile); // Debug log
+
+    // CRITICAL: Verify user is admin
+    // Backend uses 'es_admin' (Spanish) instead of 'is_admin' (English)
+    const isAdmin = userProfile.is_admin || userProfile.es_admin;
+    
+    if (!isAdmin) {
+      throw new Error('Acceso denegado. Solo administradores pueden acceder al dashboard.');
+    }
+
+    // Return formatted response
     return {
-      access_token: 'mock-jwt-token-12345',
+      access_token: token,
       user: {
-        id: '100',
-        nombre: 'Admin',
-        apellido: 'Demo',
-        correo: data.correo,
-        is_admin: true,
+        id: String(userProfile.id),
+        nombre: userProfile.nombre,
+        apellido: userProfile.apellido,
+        correo: userProfile.correo_electronico || userProfile.email,
+        is_admin: Boolean(isAdmin), // Convert to boolean and use consistent naming
       },
     };
-  }
-
-  try {
-    const response = await api.post<LoginAdminResponse>('/auth/login', data);
-    return response.data;
-  } catch (error) {
-    // Re-throw error after logging for debugging
+  } catch (error: any) {
     console.error('Login failed:', error);
-    throw error;
+    
+    // Handle specific error cases
+    if (error.response?.status === 401) {
+      throw new Error('Credenciales inválidas');
+    }
+    
+    if (error.message.includes('Solo administradores')) {
+      throw error; // Re-throw admin validation error
+    }
+    
+    throw new Error(error.message || 'Error al iniciar sesión');
   }
 }
 
