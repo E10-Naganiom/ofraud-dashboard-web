@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { mockRecentIncidents } from '@/lib/mock/dashboardData';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Incident } from '@/lib/types/incident.types';
 import { cn } from '@/lib/utils/cn';
 import { ArrowRight } from 'lucide-react';
 
@@ -39,10 +40,35 @@ const truncateTitle = (title: string, maxLength: number = 60): string => {
   return `${title.substring(0, maxLength)}...`;
 };
 
-export default function RecentIncidentsList(): React.JSX.Element {
-  const recentIncidents = mockRecentIncidents.slice(0, 8);
+interface RecentIncidentsListProps {
+  incidents?: Incident[];
+  loading?: boolean;
+}
 
-  if (recentIncidents.length === 0) {
+export default function RecentIncidentsList({ 
+  incidents = [], 
+  loading = false 
+}: RecentIncidentsListProps): React.JSX.Element {
+  
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Card key={i} className="p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  if (!incidents || incidents.length === 0) {
     return (
       <Card className="p-6">
         <p className="text-center text-gray-500">No hay incidentes recientes</p>
@@ -53,13 +79,13 @@ export default function RecentIncidentsList(): React.JSX.Element {
   return (
     <div className="space-y-4">
       <div className="space-y-3">
-        {recentIncidents.map((incident) => {
+        {incidents.map((incident) => {
           const status = statusConfig[incident.id_estatus] || statusConfig[1];
 
           return (
             <Link
               key={incident.id}
-              href={`/dashboard/incidents/${incident.id}`}
+              href={`/incidents/${incident.id}`}
               className="block"
             >
               <Card className="p-4 hover:shadow-md transition-all hover:border-blue-300">
@@ -70,8 +96,8 @@ export default function RecentIncidentsList(): React.JSX.Element {
                     </h3>
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
-                        <span className="font-medium">Categoría:</span>
-                        {incident.categoria}
+                        <span className="font-medium">Categoría ID:</span>
+                        {incident.id_categoria}
                       </span>
                       <span className="text-gray-400">•</span>
                       <span>{formatDate(incident.fecha_creacion)}</span>

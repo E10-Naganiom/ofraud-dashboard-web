@@ -1,90 +1,105 @@
 'use client';
 
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Globe } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const incidentData = [
-  { name: 'Phishing', value: 1250, percentage: 42.5, color: '#FCD34D' },
-  { name: 'Malware', value: 850, percentage: 28.9, color: '#3B82F6' },
-  { name: 'Ransomware', value: 520, percentage: 17.7, color: '#EF4444' },
-  { name: 'Llamadas', value: 320, percentage: 10.9, color: '#10B981' },
-];
+interface IncidentsPieChartProps {
+  data?: {
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
+  loading?: boolean;
+}
 
-const TOTAL_SESSIONS = 2940;
+export default function IncidentsPieChart({ 
+  data, 
+  loading = false 
+}: IncidentsPieChartProps): React.JSX.Element {
+  
+  if (loading) {
+    return (
+      <Card className="p-6">
+        <Skeleton className="h-6 w-48 mb-4" />
+        <div className="flex items-center justify-center h-64">
+          <Skeleton className="h-48 w-48 rounded-full" />
+        </div>
+      </Card>
+    );
+  }
 
-export default function IncidentsPieChart() {
+  if (!data) {
+    return (
+      <Card className="p-6">
+        <h3 className="text-lg font-semibold mb-4">Distribución de Incidentes</h3>
+        <div className="flex items-center justify-center h-64 text-gray-500">
+          No hay datos disponibles
+        </div>
+      </Card>
+    );
+  }
+
+  const total = data.pending + data.approved + data.rejected;
+  
+  const pendingPercent = total > 0 ? ((data.pending / total) * 100).toFixed(1) : '0';
+  const approvedPercent = total > 0 ? ((data.approved / total) * 100).toFixed(1) : '0';
+  const rejectedPercent = total > 0 ? ((data.rejected / total) * 100).toFixed(1) : '0';
+
   return (
-    <div className="bg-brand-background-subtle rounded-2xl p-6 shadow-sm">
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-6">
-        <div className="flex items-center justify-center w-10 h-10 rounded-full bg-white">
-          <Globe className="w-5 h-5 text-orange-500" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-brand-text-primary">
-            Incidentes más comunes
-          </h3>
-        </div>
-      </div>
-
-      {/* Total Count */}
-      <div className="mb-2">
-        <div className="text-4xl font-bold text-brand-text-primary">
-          {TOTAL_SESSIONS.toLocaleString()}
-        </div>
-        <div className="text-sm text-brand-text-secondary">
-          Total de sesiones • Por fuente
-        </div>
-      </div>
-
-      {/* Chart and Legend */}
-      <div className="flex flex-col lg:flex-row items-center gap-8 mt-6">
-        {/* Pie Chart */}
-        <div className="w-full lg:w-1/2">
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={incidentData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                dataKey="value"
-              >
-                {incidentData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-            </PieChart>
-          </ResponsiveContainer>
+    <Card className="p-6">
+      <h3 className="text-lg font-semibold mb-4">Distribución de Incidentes</h3>
+      
+      <div className="space-y-4">
+        {/* Pending */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-700">Pendientes</span>
+            <span className="text-sm text-gray-600">{data.pending} ({pendingPercent}%)</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              className="bg-yellow-500 h-3 rounded-full transition-all"
+              style={{ width: `${pendingPercent}%` }}
+            />
+          </div>
         </div>
 
-        {/* Legend */}
-        <div className="w-full lg:w-1/2 space-y-4">
-          {incidentData.map((item) => (
-            <div key={item.name} className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="text-base text-brand-text-primary font-medium">
-                  {item.name}
-                </span>
-              </div>
-              <div className="text-right">
-                <div className="text-base font-semibold text-brand-text-primary">
-                  {item.value.toLocaleString()}
-                </div>
-                <div className="text-sm text-brand-text-secondary">
-                  {item.percentage}%
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* Approved */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-700">Aprobados</span>
+            <span className="text-sm text-gray-600">{data.approved} ({approvedPercent}%)</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              className="bg-green-500 h-3 rounded-full transition-all"
+              style={{ width: `${approvedPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Rejected */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-700">Rechazados</span>
+            <span className="text-sm text-gray-600">{data.rejected} ({rejectedPercent}%)</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div 
+              className="bg-red-500 h-3 rounded-full transition-all"
+              style={{ width: `${rejectedPercent}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Total */}
+        <div className="pt-4 border-t">
+          <div className="flex justify-between items-center">
+            <span className="font-semibold text-gray-900">Total</span>
+            <span className="font-bold text-lg text-gray-900">{total}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

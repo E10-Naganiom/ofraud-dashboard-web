@@ -10,8 +10,6 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  Users,
-  Tag,
 } from 'lucide-react';
 
 export default function DashboardPage(): React.JSX.Element {
@@ -30,62 +28,48 @@ export default function DashboardPage(): React.JSX.Element {
         </p>
       </div>
 
-      {/* Stats Section - Temporarily Hidden */}
-      {/* TODO: Replace with beautiful charts similar to mobile app design */}
-      {false && (
-        <div>
-          <h2 className="text-xl font-semibold text-brand-text-primary mb-4">Métricas</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <MetricCard
-              label="Total de Incidentes"
-              value={metrics?.totalIncidents ?? 0}
-              icon={<TrendingUp size={32} />}
-              loading={loading}
-              error={error !== null && !loading}
-            />
-            <MetricCard
-              label="Incidentes Pendientes"
-              value={metrics?.pendingIncidents ?? 0}
-              icon={<Clock size={32} />}
-              loading={loading}
-              error={error !== null && !loading}
-            />
-            <MetricCard
-              label="Incidentes Aprobados"
-              value={metrics?.approvedIncidents ?? 0}
-              icon={<CheckCircle size={32} />}
-              loading={loading}
-              error={error !== null && !loading}
-            />
-            <MetricCard
-              label="Incidentes Rechazados"
-              value={metrics?.rejectedIncidents ?? 0}
-              icon={<XCircle size={32} />}
-              loading={loading}
-              error={error !== null && !loading}
-            />
-            <MetricCard
-              label="Total de Usuarios"
-              value={metrics?.totalUsers ?? 0}
-              icon={<Users size={32} />}
-              loading={loading}
-              error={error !== null && !loading}
-            />
-            <MetricCard
-              label="Total de Categorías"
-              value={metrics?.totalCategories ?? 0}
-              icon={<Tag size={32} />}
-              loading={loading}
-              error={error !== null && !loading}
-            />
-          </div>
+      {/* Stats Section */}
+      <div>
+        <h2 className="text-xl font-semibold text-brand-text-primary mb-4">Métricas</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCard
+            label="Total de Incidentes"
+            value={metrics?.totalIncidents ?? 0}
+            icon={<TrendingUp size={32} />}
+            loading={loading}
+            error={error !== null && !loading}
+          />
+          <MetricCard
+            label="Incidentes Pendientes"
+            value={metrics?.pendingIncidents ?? 0}
+            icon={<Clock size={32} />}
+            loading={loading}
+            error={error !== null && !loading}
+          />
+          <MetricCard
+            label="Incidentes Aprobados"
+            value={metrics?.approvedIncidents ?? 0}
+            icon={<CheckCircle size={32} />}
+            loading={loading}
+            error={error !== null && !loading}
+          />
+          <MetricCard
+            label="Incidentes Rechazados"
+            value={metrics?.rejectedIncidents ?? 0}
+            icon={<XCircle size={32} />}
+            loading={loading}
+            error={error !== null && !loading}
+          />
         </div>
-      )}
+      </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <IncidentsPieChart />
+          <IncidentsPieChart 
+            data={metrics?.incidentsByStatus}
+            loading={loading}
+          />
         </div>
         <div className="lg:col-span-1">
           <ReportsCountCard />
@@ -97,7 +81,10 @@ export default function DashboardPage(): React.JSX.Element {
         <h2 className="text-xl font-semibold text-brand-text-primary mb-4">
           Actividad Reciente
         </h2>
-        <RecentIncidentsList />
+        <RecentIncidentsList 
+          incidents={metrics?.recentIncidents}
+          loading={loading}
+        />
       </div>
     </div>
   );
