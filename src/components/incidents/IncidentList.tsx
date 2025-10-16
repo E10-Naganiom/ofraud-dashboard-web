@@ -86,13 +86,7 @@ export default function IncidentList({ incidents, categoryMap = new Map() }: Inc
                       <Eye className="h-4 w-4" />
                     </Button>
                   </Link>
-                  {incident.id_estatus === 1 && (
-                    <Link href={`/incidents/${incident.id}/evaluate`}>
-                      <Button variant="ghost" size="icon" aria-label="Evaluar incidente">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
+
                 </TableCell>
               </TableRow>
             ))}

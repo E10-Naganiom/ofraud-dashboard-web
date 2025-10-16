@@ -1,3 +1,4 @@
+//app/(dashboard)/incidents/page.tsx - Lista de incidentes
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -14,21 +15,14 @@ import {
   getRejectedIncidents,
 } from "@/lib/api/incidents";
 import type { Incident } from "@/lib/types/incident.types";
-import { mockIncidents } from "@/lib/mock/data";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useCategories } from "@/hooks/useCategories";
-
-// Calculate mock counts from the full mock data
-const mockCounts = {
-  all: mockIncidents.length,
-  pending: mockIncidents.filter(i => i.id_estatus === 1).length,
-  approved: mockIncidents.filter(i => i.id_estatus === 2).length,
-  rejected: mockIncidents.filter(i => i.id_estatus === 3).length,
-};
+import { toast } from "sonner";
 
 export default function IncidentsPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [allIncidents, setAllIncidents] = useState<Incident[]>([]); // Para calcular counts
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +40,29 @@ export default function IncidentsPage() {
     }, new Map<string, string>());
   }, [categories, loadingCategories]);
 
+  // Calculate counts from all incidents
+  const counts = useMemo(() => ({
+    all: allIncidents.length,
+    pending: allIncidents.filter(i => i.id_estatus === 1).length,
+    approved: allIncidents.filter(i => i.id_estatus === 2).length,
+    rejected: allIncidents.filter(i => i.id_estatus === 3).length,
+  }), [allIncidents]);
+
+  // Fetch all incidents once for counts
+  useEffect(() => {
+    const fetchAllIncidents = async () => {
+      try {
+        const data = await getIncidents();
+        setAllIncidents(data);
+      } catch (error: any) {
+        console.error("Failed to fetch all incidents:", error);
+      }
+    };
+
+    fetchAllIncidents();
+  }, []);
+
+  // Fetch filtered incidents based on active tab
   useEffect(() => {
     const fetchIncidents = async () => {
       setLoading(true);
@@ -67,9 +84,11 @@ export default function IncidentsPage() {
         }
         setIncidents(data);
         setError(null);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to fetch incidents:", error);
-        setError('Error al cargar incidentes. Intente nuevamente.');
+        const errorMessage = error.message || 'Error al cargar incidentes. Intente nuevamente.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -80,6 +99,7 @@ export default function IncidentsPage() {
 
   const handleTabClick = (tabId: string) => {
     setActiveTab(tabId);
+    setSearchTerm(''); // Clear search when changing tabs
   };
 
   const filteredIncidents = useMemo(() => {
@@ -105,13 +125,13 @@ export default function IncidentsPage() {
         <IncidentStatusTabs
           activeTab={activeTab}
           onTabClick={handleTabClick}
-          counts={mockCounts}
+          counts={counts}
         />
       </div>
 
       <div className="relative mb-4 mt-6">
         <Input
-          placeholder="Buscar por título o descripción..."
+          placeholder="Buscar por título, descripción o ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-10"
@@ -128,19 +148,33 @@ export default function IncidentsPage() {
         )}
       </div>
 
-      {loading && <p>Cargando incidentes...</p>}
-      {!loading && error && <p className="text-red-500">{error}</p>}
+      {loading && (
+        <div className="text-center py-8">
+          <p className="text-gray-600">Cargando incidentes...</p>
+        </div>
+      )}
+      
+      {!loading && error && (
+        <div className="text-red-500 p-4 border border-red-300 rounded bg-red-50">
+          {error}
+        </div>
+      )}
+      
       {!loading && !error && incidents.length === 0 && (
-        <p className="text-gray-500">
+        <p className="text-gray-500 text-center py-8">
           {activeTab === 'pending' && 'No hay incidentes pendientes.'}
           {activeTab === 'approved' && 'No hay incidentes aprobados.'}
           {activeTab === 'rejected' && 'No hay incidentes rechazados.'}
           {activeTab === 'all' && 'No se encontraron incidentes.'}
         </p>
       )}
+      
       {!loading && !error && filteredIncidents.length === 0 && debouncedSearchTerm && (
-        <p>No se encontraron incidentes que coincidan con &apos;{debouncedSearchTerm}&apos;.</p>
+        <p className="text-center py-8">
+          No se encontraron incidentes que coincidan con &apos;{debouncedSearchTerm}&apos;.
+        </p>
       )}
+      
       {!loading && !error && filteredIncidents.length > 0 && (
         <IncidentList incidents={filteredIncidents} categoryMap={categoryMap} />
       )}
