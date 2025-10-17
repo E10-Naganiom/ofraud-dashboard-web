@@ -92,8 +92,14 @@ export async function loginAdmin(
     // Backend uses 'es_admin' (Spanish) instead of 'is_admin' (English)
     const isAdmin = userProfile.is_admin || userProfile.es_admin;
     
+    const isActive = userProfile.is_active || userProfile.es_activo;
+
     if (!isAdmin) {
       throw new Error('Acceso denegado. Solo administradores pueden acceder al dashboard.');
+    }
+
+    if (!isActive) {
+      throw new Error('Acceso denegado. Solo administradores activos pueden acceder al dashboard.');
     }
 
     // Return formatted response
