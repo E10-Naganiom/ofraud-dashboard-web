@@ -5,50 +5,94 @@ import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/common/PageHeader';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import CategoryCard from '@/components/categories/CategoryCard';
-import { getCategories } from '@/lib/api/categories';
+import { getCategories, deleteCategory } from '@/lib/api/categories';
 import type { Category } from '@/lib/types/category.types';
+import { toast } from 'sonner';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 export default function CategoriesPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    async function fetchCategories() {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await getCategories();
-
-        // Sort by risk level (highest first) then alphabetically
-        const sorted = [...data].sort((a, b) => {
-          if (a.nivelRiesgo !== b.nivelRiesgo) {
-            return b.nivelRiesgo - a.nivelRiesgo;
-          }
-          return a.titulo.localeCompare(b.titulo);
-        });
-
-        setCategories(sorted);
-      } catch (err) {
-        console.error('Error fetching categories:', err);
-        setError('Error al cargar categorías');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     fetchCategories();
   }, []);
+
+  async function fetchCategories() {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const data = await getCategories();
+
+      // Sort by risk level (highest first) then alphabetically
+      const sorted = [...data].sort((a, b) => {
+        if (a.nivelRiesgo !== b.nivelRiesgo) {
+          return b.nivelRiesgo - a.nivelRiesgo;
+        }
+        return a.titulo.localeCompare(b.titulo);
+      });
+
+      setCategories(sorted);
+    } catch (err: any) {
+      console.error('Error fetching categories:', err);
+      const errorMessage = err.message || 'Error al cargar categorías';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const handleCreateCategory = () => {
     router.push('/categories/new');
   };
 
-  const handleDeleteCategory = (id: string) => {
-    // TODO: Implement delete functionality in Story 4.5
-    console.log('Delete category:', id);
+  const handleDeleteClick = (id: string) => {
+    const category = categories.find(c => c.id === id);
+    if (category) {
+      setCategoryToDelete(category);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!categoryToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteCategory(categoryToDelete.id);
+      toast.success(`Categoría "${categoryToDelete.titulo}" eliminada exitosamente`);
+      
+      // Remove from local state
+      setCategories(prev => prev.filter(c => c.id !== categoryToDelete.id));
+      
+      setCategoryToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting category:', error);
+      const errorMessage = error.message || 'Error al eliminar la categoría';
+      toast.error(errorMessage);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const cancelDelete = () => {
+    setCategoryToDelete(null);
   };
 
   if (isLoading) {
@@ -61,10 +105,7 @@ export default function CategoriesPage() {
           </Button>
         </PageHeader>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Cargando categorías...</p>
-          </div>
+          <LoadingSpinner />
         </div>
       </div>
     );
@@ -82,7 +123,7 @@ export default function CategoriesPage() {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <p className="text-destructive mb-4">{error}</p>
-            <Button onClick={() => window.location.reload()}>
+            <Button onClick={fetchCategories}>
               Intentar nuevamente
             </Button>
           </div>
@@ -127,10 +168,36 @@ export default function CategoriesPage() {
           <CategoryCard
             key={category.id}
             category={category}
-            onDelete={handleDeleteCategory}
+            onDelete={handleDeleteClick}
           />
         ))}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!categoryToDelete} onOpenChange={(open) => !open && cancelDelete()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Está seguro de que desea eliminar la categoría <strong>&quot;{categoryToDelete?.titulo}&quot;</strong>? 
+              Esta acción no se puede deshacer.
+              <span className="block mt-2 text-sm text-yellow-600">
+                Nota: No se puede eliminar una categoría que tenga incidentes asociados.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Eliminando...' : 'Eliminar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

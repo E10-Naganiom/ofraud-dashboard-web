@@ -18,6 +18,7 @@ import CategoryDetailDisplay from '@/components/categories/CategoryDetailDisplay
 import { getCategoryById, deleteCategory } from '@/lib/api/categories';
 import type { Category } from '@/lib/types/category.types';
 import { toast } from 'sonner';
+import LoadingSpinner from '@/components/common/LoadingSpinner';
 
 export default function CategoryDetailPage() {
   const router = useRouter();
@@ -39,13 +40,11 @@ export default function CategoryDetailPage() {
         setError(null);
         const data = await getCategoryById(id);
         setCategory(data);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error fetching category:', err);
-        if (err instanceof Error && err.message === 'Category not found') {
-          setError('Categoría no encontrada');
-        } else {
-          setError('Error al cargar la categoría');
-        }
+        const errorMessage = err.message || 'Error al cargar la categoría';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setIsLoading(false);
       }
@@ -67,16 +66,17 @@ export default function CategoryDetailPage() {
   };
 
   const confirmDelete = async () => {
+    if (!id) return;
+    
     setIsDeleting(true);
     try {
       await deleteCategory(id);
       toast.success('Categoría eliminada exitosamente');
       router.push('/categories');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Error al eliminar la categoría';
+      const errorMessage = error.message || 'Error al eliminar la categoría';
       toast.error(errorMessage);
-    } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
     }
@@ -92,10 +92,7 @@ export default function CategoryDetailPage() {
           </Button>
         </div>
         <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Cargando categoría...</p>
-          </div>
+          <LoadingSpinner />
         </div>
       </div>
     );
@@ -147,9 +144,15 @@ export default function CategoryDetailPage() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar eliminación</AlertDialogTitle>
+            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Está seguro de que desea eliminar esta categoría? Esta acción no se puede deshacer.
+              ¿Está seguro de que desea eliminar la categoría <strong>&quot;{category.titulo}&quot;</strong>? 
+              Esta acción no se puede deshacer.
+              {category.titulo && (
+                <span className="block mt-2 text-sm text-yellow-600">
+                  Nota: No se puede eliminar una categoría que tenga incidentes asociados.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
