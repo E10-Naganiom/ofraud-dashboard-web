@@ -1,28 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import UserForm from "@/components/users/UserForm";
-import type { User } from "@/lib/types/user.types";
 import type { EditUserFormData } from "@/lib/validations/user.schema";
 import { toast } from "sonner";
-
-// Mock user data for profile
-const mockUser: User = {
-  id: "admin-1",
-  nombre: "Juan",
-  apellido: "Pérez",
-  email: "juan.perez@ofraud.com",
-  is_admin: true,
-  is_active: true,
-};
+import { useAuth } from "@/contexts/AuthContext";
+import { getUserById, updateUser } from "@/lib/api/users";
+import type { User } from "@/lib/types/user.types";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<User>(mockUser);
+  const { user: authUser, login } = useAuth();
+  const [user, setUser] = useState<User | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(true);
+
+  useEffect(() => {
+    if (!authUser?.id) return;
+
+    const loadUserProfile = async () => {
+      setIsFetching(true);
+      try {
+        const fetchedUser = await getUserById(authUser.id);
+        setUser(fetchedUser);
+      } catch (error: any) {
+        console.error('Error loading profile:', error);
+        toast.error(error.message || "Error al cargar el perfil.");
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    loadUserProfile();
+  }, [authUser?.id]);
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -33,27 +47,60 @@ export default function ProfilePage() {
   };
 
   const handleSubmit = async (data: EditUserFormData) => {
+    if (!authUser?.id || !user) return;
+
     setIsLoading(true);
 
-    // Simulate API call with setTimeout
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    // Mock success response
-    toast.success("Perfil actualizado exitosamente (Simulación)");
-
-    // Update local state with new data
-    setUser({
-      ...user,
-      nombre: data.nombre,
-      apellido: data.apellido,
-      email: data.email,
-      is_admin: data.is_admin,
-      is_active: data.is_active,
-    });
-
-    setIsEditing(false);
-    setIsLoading(false);
+    try {
+      const updatedUser = await updateUser(authUser.id, data);
+      
+      // Update local state
+      setUser(updatedUser);
+      
+      // Update auth context with new user data
+      login(localStorage.getItem('auth_token') || '', {
+        id: updatedUser.id,
+        nombre: updatedUser.nombre,
+        apellido: updatedUser.apellido,
+        correo: updatedUser.email,
+        is_admin: updatedUser.is_admin,
+      });
+      
+      toast.success("Perfil actualizado exitosamente");
+      setIsEditing(false);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      const errorMessage = error.message || 'Error al actualizar perfil';
+      
+      if (errorMessage.includes('correo') || errorMessage.includes('email')) {
+        toast.error("El correo ya está en uso por otro usuario.");
+      } else {
+        toast.error(errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isFetching) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <LoadingSpinner />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-10">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <p className="text-gray-600">No se pudo cargar el perfil.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10">
@@ -66,7 +113,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm text-gray-500">Nombre</p>
+              <p className="text-sm text-gray-500">Nombre Completo</p>
               <p className="text-lg font-medium">
                 {user.nombre} {user.apellido}
               </p>
@@ -106,14 +153,9 @@ export default function ProfilePage() {
               onSubmit={handleSubmit}
               onCancel={handleCancel}
               isLoading={isLoading}
-              initialData={{
-                nombre: user.nombre,
-                apellido: user.apellido,
-                email: user.email,
-                is_admin: user.is_admin,
-                is_active: user.is_active,
-              }}
+              initialData={user}
               mode="edit"
+              hideAdminFields={true} // ← NUEVO: Oculta campos de admin en perfil propio
             />
           </CardContent>
         </Card>
