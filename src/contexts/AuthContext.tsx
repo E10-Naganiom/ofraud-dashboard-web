@@ -1,12 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useRouter } from 'next/navigation';
 import type {
   AdminUser,
   AuthContextType,
   RegisterAdminRequest,
 } from '@/lib/types/auth.types';
 import { registerAdmin } from '@/lib/api/auth';
+import { setAuthToken, clearAuthToken, getAuthToken } from '@/lib/api/client';
+import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -15,53 +18,54 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
+  const router = useRouter();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Token persistence helpers
-  const saveToken = (token: string): void => {
-    localStorage.setItem('auth_token', token);
-  };
-
-  const getToken = (): string | null => {
-    return localStorage.getItem('auth_token');
-  };
-
-  const removeToken = (): void => {
-    localStorage.removeItem('auth_token');
-  };
 
   // Initialize auth state on mount
   useEffect(() => {
-    const initAuth = () => {
-      const storedToken = getToken();
-      if (storedToken) {
-        // For MVP: Assume valid, backend will validate on API calls
-        // If invalid, 401 interceptor will handle logout
-        setToken(storedToken);
-        setIsAuthenticated(true);
-        // Note: User info will be fetched by calling component or loaded from token
-      }
-      setIsLoading(false);
-    };
+    const storedToken = getAuthToken();
+    const storedUser = typeof window !== 'undefined' 
+      ? localStorage.getItem('auth_user') 
+      : null;
 
-    initAuth();
+    if (storedToken && storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser) as AdminUser;
+        setToken(storedToken);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Failed to parse stored user:', error);
+        clearAuthToken();
+        localStorage.removeItem('auth_user');
+      }
+    }
+
+    setIsLoading(false);
   }, []);
 
-  const login = (token: string, user: AdminUser): void => {
-    saveToken(token);
-    setToken(token);
-    setUser(user);
-    setIsAuthenticated(true);
+  const login = (newToken: string, newUser: AdminUser): void => {
+    setToken(newToken);
+    setUser(newUser);
+    setAuthToken(newToken);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('auth_user', JSON.stringify(newUser));
+    }
   };
 
   const logout = (): void => {
-    removeToken();
     setToken(null);
     setUser(null);
-    setIsAuthenticated(false);
+    clearAuthToken();
+    
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_user');
+    }
+
+    toast.success('Sesión cerrada exitosamente');
+    router.push('/login');
   };
 
   const register = async (userData: RegisterAdminRequest): Promise<void> => {
@@ -74,7 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         token,
-        isAuthenticated,
+        isAuthenticated: !!user && !!token,
         isLoading,
         login,
         logout,
