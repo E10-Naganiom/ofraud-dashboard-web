@@ -72,7 +72,10 @@ export default function DashboardPage(): React.JSX.Element {
           />
         </div>
         <div className="lg:col-span-1">
-          <ReportsCountCard />
+          <ReportsCountCard 
+            totalReports={metrics?.totalIncidents}
+            loading={loading}
+          />
         </div>
       </div>
 
