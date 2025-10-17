@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { evaluateIncident } from '@/lib/api/incidents';
 import { getAdminUsers } from '@/lib/api/users';
-import type { IncidentDetail, UserInfo } from '@/lib/types/incident.types';
+import type { IncidentDetail } from '@/lib/types/incident.types';
 import type { AdminUser } from '@/lib/types/user.types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
@@ -45,6 +45,12 @@ export default function IncidentEvaluationForm({ incident, onUpdate }: IncidentE
     fetchAdmins();
   }, []);
 
+  // Update local state when incident prop changes
+  useEffect(() => {
+    setSelectedStatus(incident.id_estatus);
+    setSelectedSupervisorId(incident.supervisor?.id || null);
+  }, [incident]);
+
   const isAdmin = user?.is_admin ?? false;
   const isStatusChanged = selectedStatus !== incident.id_estatus;
   const isSupervisorChanged = selectedSupervisorId !== (incident.supervisor?.id || null);
@@ -55,25 +61,15 @@ export default function IncidentEvaluationForm({ incident, onUpdate }: IncidentE
 
     setIsSubmitting(true);
     try {
-      // Call API to evaluate incident
-      await evaluateIncident(String(incident.id), selectedStatus, selectedSupervisorId);
+      // Call API to evaluate incident and get updated incident back
+      const updatedIncident = await evaluateIncident(
+        String(incident.id), 
+        selectedStatus, 
+        selectedSupervisorId
+      );
       
-      // Find supervisor info for UI update
-      const updatedSupervisor = adminUsers.find(u => u.id === selectedSupervisorId);
-      const supervisorUserInfo: UserInfo | null = updatedSupervisor
-        ? {
-            id: updatedSupervisor.id,
-            nombre: updatedSupervisor.nombre,
-            apellido: updatedSupervisor.apellido,
-            correo_electronico: updatedSupervisor.email
-          }
-        : null;
-      
-      // Update parent component with new data
-      onUpdate({ 
-        id_estatus: selectedStatus, 
-        supervisor: supervisorUserInfo 
-      });
+      // Update parent component with the full updated incident
+      onUpdate(updatedIncident);
       
       toast.success('Incidente evaluado exitosamente.');
     } catch (error: any) {
@@ -145,6 +141,13 @@ export default function IncidentEvaluationForm({ incident, onUpdate }: IncidentE
             onSupervisorChange={setSelectedSupervisorId}
             disabled={isUsersLoading || isSubmitting}
           />
+          
+          {/* Show current supervisor info */}
+          {incident.supervisor && (
+            <p className="text-xs text-gray-500">
+              Actual: {incident.supervisor.nombre} {incident.supervisor.apellido}
+            </p>
+          )}
         </div>
 
         {/* Submit Button */}
