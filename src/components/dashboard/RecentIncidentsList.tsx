@@ -81,6 +81,7 @@ export default function RecentIncidentsList({
       <div className="space-y-3">
         {incidents.map((incident) => {
           const status = statusConfig[incident.id_estatus] || statusConfig[1];
+          const categoryName = incident.categoria?.titulo || 'Sin categoría';
 
           return (
             <Link
@@ -96,8 +97,8 @@ export default function RecentIncidentsList({
                     </h3>
                     <div className="flex items-center gap-3 text-sm text-gray-600">
                       <span className="flex items-center gap-1">
-                        <span className="font-medium">Categoría ID:</span>
-                        {incident.id_categoria}
+                        <span className="font-medium">Categoría:</span>
+                        {categoryName}
                       </span>
                       <span className="text-gray-400">•</span>
                       <span>{formatDate(incident.fecha_creacion)}</span>

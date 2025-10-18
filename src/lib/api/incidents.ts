@@ -6,6 +6,7 @@
 import { api } from '@/lib/api/client';
 import { getUserById } from '@/lib/api/users';
 import type { Incident, IncidentDetail, UserInfo } from '@/lib/types/incident.types';
+import { getCategories } from './categories';
 
 /**
  * Fetch all incidents from the backend
@@ -14,12 +15,27 @@ import type { Incident, IncidentDetail, UserInfo } from '@/lib/types/incident.ty
  */
 export async function getIncidents(): Promise<Incident[]> {
   try {
-    const response = await api.get<Incident[]>('/admin/incidents/list');
-    return response.data.map(incident => ({
+    const [incidentsResponse, categories] = await Promise.all([
+      api.get<Incident[]>('/admin/incidents/list'),
+      getCategories()
+    ]);
+    
+    // Create a map of categories for quick lookup
+    const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
+    
+    return incidentsResponse.data.map(incident => ({
       ...incident,
       // Map backend fields to frontend expected structure
       correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
       es_anonimo: Boolean(incident.es_anonimo),
+      // Add category object if available
+      categoria: categoryMap.get(String(incident.id_categoria)) || {
+        id: String(incident.id_categoria),
+        titulo: 'Categoría desconocida',
+        descripcion: '',
+        nivelRiesgo: 1,
+        prevencion: '',
+      },
     }));
   } catch (error) {
     console.error('Failed to fetch incidents:', error);
@@ -56,11 +72,36 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
     
     console.log('Raw incident data from backend:', incident);
     
+    // Fetch category info if not included or if it's just an ID
+    let categoryInfo;
+    if (incident.categoria && typeof incident.categoria === 'object') {
+      categoryInfo = incident.categoria;
+    } else {
+      try {
+        const categories = await getCategories();
+        categoryInfo = categories.find(cat => cat.id === String(incident.id_categoria)) || {
+          id: String(incident.id_categoria),
+          titulo: 'Categoría desconocida',
+          descripcion: '',
+          nivelRiesgo: 1,
+          prevencion: '',
+        };
+      } catch (error) {
+        console.error('Failed to fetch category info:', error);
+        categoryInfo = {
+          id: String(incident.id_categoria),
+          titulo: 'Categoría desconocida',
+          descripcion: '',
+          nivelRiesgo: 1,
+          prevencion: '',
+        };
+      }
+    }
+    
     // If supervisor is just an ID (number), fetch the full user info
     let supervisorInfo: UserInfo | null = null;
     if (incident.supervisor) {
       if (typeof incident.supervisor === 'number') {
-        // Supervisor is just an ID, fetch the full user info
         try {
           const supervisorUser = await getUserById(String(incident.supervisor));
           supervisorInfo = {
@@ -71,10 +112,8 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
           };
         } catch (error) {
           console.error('Failed to fetch supervisor info:', error);
-          // Keep supervisor as null if fetch fails
         }
       } else {
-        // Supervisor is already an object
         supervisorInfo = incident.supervisor;
       }
     }
@@ -83,7 +122,6 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
     let reporterInfo: UserInfo;
     if (incident.usuario) {
       if (typeof incident.usuario === 'number') {
-        // Reporter is just an ID, fetch the full user info
         try {
           const reporterUser = await getUserById(String(incident.usuario));
           reporterInfo = {
@@ -94,7 +132,6 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
           };
         } catch (error) {
           console.error('Failed to fetch reporter info:', error);
-          // Fallback to default values if fetch fails
           reporterInfo = {
             id: String(incident.id_usuario || incident.usuario),
             nombre: '',
@@ -103,11 +140,9 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
           };
         }
       } else {
-        // Reporter is already an object
         reporterInfo = incident.usuario;
       }
     } else {
-      // If no usuario field, try using id_usuario
       try {
         const reporterUser = await getUserById(String(incident.id_usuario));
         reporterInfo = {
@@ -118,7 +153,6 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
         };
       } catch (error) {
         console.error('Failed to fetch reporter info from id_usuario:', error);
-        // Fallback to default values
         reporterInfo = {
           id: String(incident.id_usuario),
           nombre: '',
@@ -146,21 +180,12 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
       supervisor: supervisorInfo,
       es_anonimo: Boolean(incident.es_anonimo),
       
-      // Nested objects
-      categoria: incident.categoria || {
-        id: String(incident.id_categoria),
-        titulo: 'Categoría desconocida',
-        descripcion: '',
-        nivelRiesgo: 1,
-        prevencion: '',
-      },
-      
+      categoria: categoryInfo,
       usuario: reporterInfo,
-      
       evidencia: incident.evidencia || incident.evidencias || [],
     };
     
-    console.log('Mapped incident with supervisor and reporter:', mappedIncident);
+    console.log('Mapped incident with supervisor, reporter, and category:', mappedIncident);
     
     return mappedIncident;
   } catch (error) {
@@ -168,6 +193,7 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
     throw error;
   }
 }
+
 
 /**
  * Evaluates an incident by updating its status.
@@ -213,11 +239,24 @@ export async function evaluateIncident(
  */
 export async function getPendingIncidents(): Promise<Incident[]> {
   try {
-    const response = await api.get<Incident[]>('/admin/incidents/list/pending');
-    return response.data.map(incident => ({
+    const [incidentsResponse, categories] = await Promise.all([
+      api.get<Incident[]>('/admin/incidents/list/pending'),
+      getCategories()
+    ]);
+    
+    const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
+    
+    return incidentsResponse.data.map(incident => ({
       ...incident,
       correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
       es_anonimo: Boolean(incident.es_anonimo),
+      categoria: categoryMap.get(String(incident.id_categoria)) || {
+        id: String(incident.id_categoria),
+        titulo: 'Categoría desconocida',
+        descripcion: '',
+        nivelRiesgo: 1,
+        prevencion: '',
+      },
     }));
   } catch (error) {
     console.error('Failed to fetch pending incidents:', error);
@@ -231,11 +270,24 @@ export async function getPendingIncidents(): Promise<Incident[]> {
  */
 export async function getApprovedIncidents(): Promise<Incident[]> {
   try {
-    const response = await api.get<Incident[]>('/admin/incidents/list/approved');
-    return response.data.map(incident => ({
+    const [incidentsResponse, categories] = await Promise.all([
+      api.get<Incident[]>('/admin/incidents/list/approved'),
+      getCategories()
+    ]);
+    
+    const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
+    
+    return incidentsResponse.data.map(incident => ({
       ...incident,
       correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
       es_anonimo: Boolean(incident.es_anonimo),
+      categoria: categoryMap.get(String(incident.id_categoria)) || {
+        id: String(incident.id_categoria),
+        titulo: 'Categoría desconocida',
+        descripcion: '',
+        nivelRiesgo: 1,
+        prevencion: '',
+      },
     }));
   } catch (error) {
     console.error('Failed to fetch approved incidents:', error);
@@ -249,11 +301,24 @@ export async function getApprovedIncidents(): Promise<Incident[]> {
  */
 export async function getRejectedIncidents(): Promise<Incident[]> {
   try {
-    const response = await api.get<Incident[]>('/admin/incidents/list/rejected');
-    return response.data.map(incident => ({
+    const [incidentsResponse, categories] = await Promise.all([
+      api.get<Incident[]>('/admin/incidents/list/rejected'),
+      getCategories()
+    ]);
+    
+    const categoryMap = new Map(categories.map(cat => [cat.id, cat]));
+    
+    return incidentsResponse.data.map(incident => ({
       ...incident,
       correo_electronico_atacante: incident.correo_electronico_atacante || incident.correo,
       es_anonimo: Boolean(incident.es_anonimo),
+      categoria: categoryMap.get(String(incident.id_categoria)) || {
+        id: String(incident.id_categoria),
+        titulo: 'Categoría desconocida',
+        descripcion: '',
+        nivelRiesgo: 1,
+        prevencion: '',
+      },
     }));
   } catch (error) {
     console.error('Failed to fetch rejected incidents:', error);
