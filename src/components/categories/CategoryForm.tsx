@@ -2,7 +2,6 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { categorySchema, type CategoryFormData } from "@/lib/validations/category.schema";
 import type { Category } from "@/lib/types/category.types";
 import { Button } from "@/components/ui/button";
@@ -22,9 +21,8 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
-import { api } from "@/lib/api/client";
-import { toast } from "sonner";
 
 interface CategoryFormProps {
   initialData?: Category;
@@ -39,11 +37,6 @@ export function CategoryForm({
   onCancel,
   isLoading,
 }: CategoryFormProps) {
-  const [imagePreview, setImagePreview] = useState<string | undefined>(
-    initialData?.imagen
-  );
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-
   const form = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
@@ -58,46 +51,7 @@ export function CategoryForm({
     },
   });
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
-      toast.error("Formato de archivo no válido. Use JPG, PNG o WEBP.");
-      return;
-    }
-
-    setIsUploadingImage(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await api.post<{ url: string }>("/files/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const imageUrl = response.data.url;
-      form.setValue("imagen", imageUrl, { shouldValidate: true });
-      setImagePreview(imageUrl);
-      toast.success("Imagen cargada exitosamente");
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Error al cargar la imagen");
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    form.setValue("imagen", "", { shouldValidate: true });
-    setImagePreview(undefined);
-  };
+  const isFormChanged = form.formState.isDirty;
 
   return (
     <Form {...form}>
@@ -109,7 +63,7 @@ export function CategoryForm({
             <FormItem>
               <FormLabel>Título *</FormLabel>
               <FormControl>
-                <Input placeholder="Ingrese el título" {...field} />
+                <Input placeholder="Ej: Phishing" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -124,7 +78,7 @@ export function CategoryForm({
               <FormLabel>Descripción *</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Ingrese la descripción"
+                  placeholder="Describe brevemente esta categoría de ciberdelito..."
                   {...field}
                   rows={4}
                 />
@@ -147,10 +101,30 @@ export function CategoryForm({
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="1">Muy Bajo</SelectItem>
-                  <SelectItem value="2">Bajo</SelectItem>
-                  <SelectItem value="3">Medio</SelectItem>
-                  <SelectItem value="4">Alto</SelectItem>
+                  <SelectItem value="1">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-full bg-green-500"></span>
+                      Muy Bajo
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="2">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-full bg-yellow-500"></span>
+                      Bajo
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="3">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-full bg-orange-500"></span>
+                      Medio
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="4">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-3 h-3 rounded-full bg-red-500"></span>
+                      Alto
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -163,14 +137,17 @@ export function CategoryForm({
           name="senales"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Señales</FormLabel>
+              <FormLabel>Señales e Indicadores</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Ingrese las señales (opcional)"
+                  placeholder="Señales de alerta para identificar este tipo de incidente (opcional)..."
                   {...field}
                   rows={3}
                 />
               </FormControl>
+              <FormDescription>
+                Señales que ayuden a identificar este tipo de ciberdelito
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -184,11 +161,14 @@ export function CategoryForm({
               <FormLabel>Prevención *</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Ingrese medidas de prevención"
+                  placeholder="Medidas preventivas para evitar este tipo de incidente..."
                   {...field}
                   rows={3}
                 />
               </FormControl>
+              <FormDescription>
+                Consejos para prevenir este tipo de ciberdelito
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -199,14 +179,17 @@ export function CategoryForm({
           name="acciones"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Acciones</FormLabel>
+              <FormLabel>Acciones Recomendadas</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Ingrese las acciones (opcional)"
+                  placeholder="Acciones a tomar si se identifica este incidente (opcional)..."
                   {...field}
                   rows={3}
                 />
               </FormControl>
+              <FormDescription>
+                Qué hacer si se detecta este tipo de ciberdelito
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -220,72 +203,47 @@ export function CategoryForm({
               <FormLabel>Ejemplos</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Ingrese ejemplos (opcional)"
+                  placeholder="Ejemplos concretos de este tipo de incidente (opcional)..."
                   {...field}
                   rows={3}
                 />
               </FormControl>
+              <FormDescription>
+                Casos reales o ejemplos ilustrativos
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="space-y-2">
-          <FormLabel>Imagen</FormLabel>
-          <div className="flex flex-col gap-4">
-            {imagePreview && (
-              <div className="relative">
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  className="w-full max-w-md h-48 object-cover rounded-md"
-                />
-                {initialData && (
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleRemoveImage}
-                    className="mt-2"
-                  >
-                    Eliminar imagen
-                  </Button>
-                )}
-              </div>
-            )}
-            <Input
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              onChange={handleImageUpload}
-              disabled={isUploadingImage || isLoading}
-            />
-            {isUploadingImage && (
-              <p className="text-sm text-muted-foreground">Cargando imagen...</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-4">
+        <div className="flex gap-4 pt-4">
           <Button
             type="submit"
             disabled={
               isLoading ||
-              isUploadingImage ||
               !form.formState.isValid ||
-              (initialData && !form.formState.isDirty)
+              (initialData && !isFormChanged)
             }
+            className="flex-1"
           >
-            {isLoading ? "Guardando..." : initialData ? "Actualizar" : "Crear"}
+            {isLoading ? "Guardando..." : initialData ? "Actualizar Categoría" : "Crear Categoría"}
           </Button>
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={isLoading}
+            className="flex-1"
           >
             Cancelar
           </Button>
         </div>
+
+        {initialData && !isFormChanged && (
+          <p className="text-sm text-muted-foreground text-center">
+            Realiza cambios en el formulario para poder guardar
+          </p>
+        )}
       </form>
     </Form>
   );

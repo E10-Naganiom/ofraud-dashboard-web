@@ -41,23 +41,7 @@ export default function CategoryDetailDisplay({ category }: CategoryDetailDispla
             <p className="text-muted-foreground">{category.descripcion}</p>
           </div>
 
-          {category.imagen && (
-            <div className="relative w-full h-64 rounded-lg overflow-hidden">
-              <Image
-                src={category.imagen}
-                alt={category.titulo}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-              />
-            </div>
-          )}
-
-          {!category.imagen && (
-            <div className="relative w-full h-64 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-              <p className="text-muted-foreground">Sin imagen</p>
-            </div>
-          )}
+          
         </CardContent>
       </Card>
 

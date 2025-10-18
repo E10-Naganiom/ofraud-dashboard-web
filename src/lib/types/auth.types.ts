@@ -17,6 +17,7 @@ export interface RegisterAdminRequest {
  * Admin registration response from backend
  */
 export interface RegisterAdminResponse {
+  correo_electronico: any;
   id: string;
   nombre: string;
   apellido: string;

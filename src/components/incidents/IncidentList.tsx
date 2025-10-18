@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, Edit } from "lucide-react";
+import { Eye } from "lucide-react";
 import type { Incident } from "@/lib/types/incident.types";
 import IncidentStatusBadge from "./IncidentStatusBadge";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,11 @@ import {
 
 interface IncidentListProps {
   incidents: Incident[];
-  categoryMap?: Map<string, string>;
 }
 
 const INCIDENTS_PER_PAGE = 10;
 
-export default function IncidentList({ incidents, categoryMap = new Map() }: IncidentListProps) {
+export default function IncidentList({ incidents }: IncidentListProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   const totalPages = Math.ceil(incidents.length / INCIDENTS_PER_PAGE);
@@ -74,7 +73,7 @@ export default function IncidentList({ incidents, categoryMap = new Map() }: Inc
                   {incident.titulo}
                 </TableCell>
                 <TableCell>
-                  {categoryMap.get(incident.id_categoria) || 'N/A'}
+                  {incident.categoria?.titulo || 'N/A'}
                 </TableCell>
                 <TableCell>{formatDate(incident.fecha_creacion)}</TableCell>
                 <TableCell>
@@ -86,13 +85,6 @@ export default function IncidentList({ incidents, categoryMap = new Map() }: Inc
                       <Eye className="h-4 w-4" />
                     </Button>
                   </Link>
-                  {incident.id_estatus === 1 && (
-                    <Link href={`/incidents/${incident.id}/evaluate`}>
-                      <Button variant="ghost" size="icon" aria-label="Evaluar incidente">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </Link>
-                  )}
                 </TableCell>
               </TableRow>
             ))}

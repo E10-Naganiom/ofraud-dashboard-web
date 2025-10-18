@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import type { User } from "@/lib/types/user.types";
+import { updateUser, inactivateUser } from "@/lib/api/users";
 
 interface UserStatusToggleProps {
   user: User;
@@ -38,25 +39,27 @@ export default function UserStatusToggle({
 
     setIsLoading(true);
 
-    // Simulate API call with setTimeout
-    setTimeout(() => {
-      // Simulate error for user with id '0'
-      if (user.id === "0") {
-        toast.error("Usuario no encontrado (Simulación)");
-        setIsLoading(false);
-        setIsDialogOpen(false);
-        setPendingStatus(null);
-        return;
+    try {
+      if (pendingStatus) {
+        // Activate user - update is_active to true
+        await updateUser(user.id, { is_active: true });
+        toast.success("Usuario activado exitosamente");
+      } else {
+        // Inactivate user - use inactivate endpoint
+        await inactivateUser(user.id);
+        toast.success("Usuario inactivado exitosamente");
       }
-
-      // Success case
-      const action = pendingStatus ? "activado" : "inactivado";
-      toast.success(`Usuario ${action} exitosamente (Simulación)`);
+      
       onStatusChange(user.id, pendingStatus);
+    } catch (error: any) {
+      console.error('Error updating user status:', error);
+      const errorMessage = error.message || 'Error al actualizar el estado del usuario';
+      toast.error(errorMessage);
+    } finally {
       setIsLoading(false);
       setIsDialogOpen(false);
       setPendingStatus(null);
-    }, 500);
+    }
   };
 
   const handleCancel = () => {
@@ -80,6 +83,11 @@ export default function UserStatusToggle({
             <AlertDialogTitle>Confirmar acción</AlertDialogTitle>
             <AlertDialogDescription>
               ¿Está seguro de que desea {actionText} esta cuenta?
+              {!pendingStatus && (
+                <span className="block mt-2 text-sm text-yellow-600">
+                  Los usuarios inactivos no podrán iniciar sesión.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
