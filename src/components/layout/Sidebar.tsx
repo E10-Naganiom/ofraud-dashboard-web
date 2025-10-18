@@ -43,7 +43,6 @@ export default function Sidebar({ className, onLinkClick }: SidebarProps): React
     logout();
   };
 
-  // Get user initials
   const getInitials = () => {
     if (!user) return 'U';
     const firstInitial = user.nombre?.charAt(0) || '';
@@ -51,16 +50,15 @@ export default function Sidebar({ className, onLinkClick }: SidebarProps): React
     return (firstInitial + lastInitial).toUpperCase() || 'U';
   };
 
-  // Get full name
   const getFullName = () => {
     if (!user) return 'Usuario';
     return `${user.nombre || ''} ${user.apellido || ''}`.trim() || 'Usuario';
   };
 
   return (
-    <aside className={cn('flex flex-col h-full bg-sidebar border-r border-sidebar-border', className)}>
+    <aside className={cn('flex flex-col h-full bg-sidebar border-r border-sidebar-border overflow-y-auto scrollbar-hide', className)}>
       {/* Logo Section */}
-      <div className="p-6 border-b border-sidebar-border flex items-center justify-center">
+      <div className="flex-shrink-0 p-6 border-b border-sidebar-border flex items-center justify-center">
         <Image
           src="/logo.png"
           alt="Logo"
@@ -72,7 +70,7 @@ export default function Sidebar({ className, onLinkClick }: SidebarProps): React
       </div>
 
       {/* User Info Section */}
-      <div className="p-6 border-b border-sidebar-border">
+      <div className="flex-shrink-0 p-6 border-b border-sidebar-border">
         <div className="flex flex-col items-center space-y-3">
           <div className="w-12 h-12 rounded-full bg-brand-accent flex items-center justify-center font-semibold text-lg text-black">
             {getInitials()}
@@ -88,7 +86,7 @@ export default function Sidebar({ className, onLinkClick }: SidebarProps): React
       </div>
 
       {/* Navigation Links */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-shrink-0 p-4">
         <ul className="space-y-2">
           {navLinks.map((link) => (
             <li key={link.path}>
@@ -112,7 +110,7 @@ export default function Sidebar({ className, onLinkClick }: SidebarProps): React
       </nav>
 
       {/* Logout Button */}
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="flex-shrink-0 p-4 border-t border-sidebar-border mt-auto">
         <Button
           variant="ghost"
           onClick={handleLogout}

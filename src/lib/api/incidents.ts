@@ -28,6 +28,21 @@ export async function getIncidents(): Promise<Incident[]> {
 }
 
 /**
+ * Fetch incident statistics from backend
+ * @returns Promise resolving to statistics object
+ * @throws Error if API call fails
+ */
+export async function getIncidentStatistics(): Promise<any> {
+  try {
+    const response = await api.get<any>('/incidents/statistics/summary');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch incident statistics:', error);
+    throw error;
+  }
+}
+
+/**
  * Fetch a single incident by its ID
  * @param id The ID of the incident to fetch
  * @returns Promise resolving to the detailed incident object
@@ -64,6 +79,55 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
       }
     }
     
+    // If usuario (reporter) is just an ID (number), fetch the full user info
+    let reporterInfo: UserInfo;
+    if (incident.usuario) {
+      if (typeof incident.usuario === 'number') {
+        // Reporter is just an ID, fetch the full user info
+        try {
+          const reporterUser = await getUserById(String(incident.usuario));
+          reporterInfo = {
+            id: reporterUser.id,
+            nombre: reporterUser.nombre,
+            apellido: reporterUser.apellido,
+            correo_electronico: reporterUser.email,
+          };
+        } catch (error) {
+          console.error('Failed to fetch reporter info:', error);
+          // Fallback to default values if fetch fails
+          reporterInfo = {
+            id: String(incident.id_usuario || incident.usuario),
+            nombre: '',
+            apellido: '',
+            correo_electronico: '',
+          };
+        }
+      } else {
+        // Reporter is already an object
+        reporterInfo = incident.usuario;
+      }
+    } else {
+      // If no usuario field, try using id_usuario
+      try {
+        const reporterUser = await getUserById(String(incident.id_usuario));
+        reporterInfo = {
+          id: reporterUser.id,
+          nombre: reporterUser.nombre,
+          apellido: reporterUser.apellido,
+          correo_electronico: reporterUser.email,
+        };
+      } catch (error) {
+        console.error('Failed to fetch reporter info from id_usuario:', error);
+        // Fallback to default values
+        reporterInfo = {
+          id: String(incident.id_usuario),
+          nombre: '',
+          apellido: '',
+          correo_electronico: '',
+        };
+      }
+    }
+    
     // Map backend response to frontend structure
     const mappedIncident: IncidentDetail = {
       id: incident.id,
@@ -91,17 +155,12 @@ export async function getIncidentById(id: string): Promise<IncidentDetail> {
         prevencion: '',
       },
       
-      usuario: incident.usuario || {
-        id: String(incident.id_usuario),
-        nombre: '',
-        apellido: '',
-        correo_electronico: '',
-      },
+      usuario: reporterInfo,
       
       evidencia: incident.evidencia || incident.evidencias || [],
     };
     
-    console.log('Mapped incident with supervisor:', mappedIncident);
+    console.log('Mapped incident with supervisor and reporter:', mappedIncident);
     
     return mappedIncident;
   } catch (error) {
