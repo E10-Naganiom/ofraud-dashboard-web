@@ -1,3 +1,5 @@
+// app/(dashboard)/incidents/[id]/page.tsx - Página de detalle
+
 'use client';
 
 import * as React from 'react';
@@ -12,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import IncidentEvaluationForm from '@/components/incidents/IncidentEvaluationForm';
 import type { IncidentDetail } from '@/lib/types/incident.types';
+import { toast } from 'sonner';
 
 /**
  * Page to display the full details of a single incident.
@@ -31,37 +34,50 @@ export default function IncidentDetailPage() {
   }, [initialIncident]);
 
   const handleUpdate = (updatedData: Partial<IncidentDetail>) => {
-    setIncident((prev) => (prev ? { ...prev, ...updatedData } : null));
+    setIncident((prev) => {
+      if (!prev) return null;
+      
+      const updated = { ...prev, ...updatedData };
+      
+      // Show success toast
+      toast.success('Incidente actualizado exitosamente');
+      
+      return updated;
+    });
   };
 
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Incidente no encontrado</h2>
+        <h2 className="text-2xl font-bold text-red-600 mb-4">Error al cargar incidente</h2>
         <p className="text-gray-600 mb-6">
-          El incidente que estás buscando no existe o ha sido eliminado.
+          {error.message || 'El incidente que estás buscando no existe o ha sido eliminado.'}
         </p>
-        <Button onClick={() => router.back()}>
+        <Button onClick={() => router.push('/incidents')}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Volver
+          Volver a lista
         </Button>
       </div>
     );
   }
 
   if (!incident) {
-    return null; // Should be covered by loading/error states
+    return null;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-start">
         <Button asChild variant="outline">
-          <Link href="/dashboard/incidents">
+          <Link href="/incidents">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Volver a lista
           </Link>
@@ -71,14 +87,31 @@ export default function IncidentDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
           <IncidentDetailDisplay incident={incident} />
+          
+          {/* Evidence Gallery */}
+          {incident.evidencia && incident.evidencia.length > 0 && (
+            <EvidenceGallery evidence={incident.evidencia} />
+          )}
         </div>
+        
         <div className="space-y-6">
-          {!incident.es_anonimo && <ReporterInfoCard reporter={incident.usuario} />}
+          {/* Reporter Info */}
+          {!incident.es_anonimo && incident.usuario && (
+            <ReporterInfoCard reporter={incident.usuario} />
+          )}
+          
+          {incident.es_anonimo && (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <p className="text-sm text-gray-600 text-center">
+                Este reporte es anónimo
+              </p>
+            </div>
+          )}
+          
+          {/* Evaluation Form */}
           <IncidentEvaluationForm incident={incident} onUpdate={handleUpdate} />
         </div>
       </div>
-
-      <EvidenceGallery evidence={incident.evidencia} />
     </div>
   );
 }

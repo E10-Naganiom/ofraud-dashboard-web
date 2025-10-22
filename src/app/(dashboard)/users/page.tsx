@@ -6,19 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import UserList from "@/components/users/UserList";
-import { generateMockUsers } from "@/lib/mock/users";
+import { getAllUsers } from "@/lib/api/users";
 import type { User } from "@/lib/types/user.types";
 import { PlusCircle, X } from "lucide-react";
 import { useDebounce } from "@/hooks/useDebounce";
-
-// Helper to simulate a network request
-const fetchMockUsers = (): Promise<User[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(generateMockUsers(25)); // Generate 25 users for pagination testing
-    }, 1000); // 1-second delay to simulate loading
-  });
-};
+import { toast } from "sonner";
 
 function UserManagementPageContent() {
   const router = useRouter();
@@ -30,14 +22,18 @@ function UserManagementPageContent() {
   const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
+  // Fetch users from backend
   useEffect(() => {
     const loadUsers = async () => {
       try {
         setLoading(true);
-        const mockUsers = await fetchMockUsers();
-        setUsers(mockUsers);
-      } catch {
-        setError('Error al cargar usuarios. Intente nuevamente.');
+        setError(null);
+        const fetchedUsers = await getAllUsers();
+        setUsers(fetchedUsers);
+      } catch (err: any) {
+        const errorMessage = err.message || 'Error al cargar usuarios. Intente nuevamente.';
+        setError(errorMessage);
+        toast.error(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -46,6 +42,7 @@ function UserManagementPageContent() {
     loadUsers();
   }, []);
 
+  // Update URL with search params
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
     if (debouncedSearchTerm) {
@@ -56,6 +53,7 @@ function UserManagementPageContent() {
     router.replace(`/users?${params.toString()}`);
   }, [debouncedSearchTerm, router, searchParams]);
 
+  // Filter users based on search term
   const filteredUsers = useMemo(() => {
     return users.filter(user =>
       user.nombre.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
@@ -64,12 +62,30 @@ function UserManagementPageContent() {
     );
   }, [users, debouncedSearchTerm]);
 
-  const handleStatusChange = (userId: string, newStatus: boolean) => {
+  // Handle status change (optimistic update)
+  const handleStatusChange = async (userId: string, newStatus: boolean) => {
+    // Optimistic update
     setUsers((prevUsers) =>
       prevUsers.map((user) =>
         user.id === userId ? { ...user, is_active: newStatus } : user
       )
     );
+
+    try {
+      // TODO: Call API to update user status when endpoint is ready
+      // await updateUserStatus(userId, newStatus);
+      toast.success(
+        newStatus ? 'Usuario activado exitosamente' : 'Usuario inactivado exitosamente'
+      );
+    } catch (err: any) {
+      // Revert optimistic update on error
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId ? { ...user, is_active: !newStatus } : user
+        )
+      );
+      toast.error(err.message || 'Error al actualizar el estado del usuario');
+    }
   };
 
   return (
@@ -103,12 +119,22 @@ function UserManagementPageContent() {
         )}
       </div>
 
-      {loading && <p>Cargando...</p>}
-      {!loading && error && <p className="text-red-500">{error}</p>}
-      {!loading && !error && users.length === 0 && <p>No hay usuarios registrados.</p>}
+      {loading && <p>Cargando usuarios...</p>}
+      
+      {!loading && error && (
+        <div className="text-red-500 p-4 border border-red-300 rounded bg-red-50">
+          {error}
+        </div>
+      )}
+      
+      {!loading && !error && users.length === 0 && (
+        <p>No hay usuarios registrados.</p>
+      )}
+      
       {!loading && !error && filteredUsers.length === 0 && debouncedSearchTerm && (
         <p>No se encontraron usuarios que coincidan con &apos;{debouncedSearchTerm}&apos;.</p>
       )}
+      
       {!loading && !error && filteredUsers.length > 0 && (
         <UserList users={filteredUsers} onStatusChange={handleStatusChange} />
       )}

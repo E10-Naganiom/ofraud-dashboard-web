@@ -1,10 +1,17 @@
 'use client';
 
 import { Eye } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const TOTAL_REPORTS = 847;
+interface ReportsCountCardProps {
+  totalReports?: number;
+  loading?: boolean;
+}
 
-export default function ReportsCountCard() {
+export default function ReportsCountCard({ 
+  totalReports = 0, 
+  loading = false 
+}: ReportsCountCardProps) {
   return (
     <div className="bg-brand-background-subtle rounded-2xl p-6 shadow-sm">
       {/* Header */}
@@ -21,9 +28,13 @@ export default function ReportsCountCard() {
 
       {/* Total Count */}
       <div className="mt-6">
-        <div className="text-5xl font-bold text-brand-text-primary">
-          {TOTAL_REPORTS.toLocaleString()}
-        </div>
+        {loading ? (
+          <Skeleton className="h-16 w-32" />
+        ) : (
+          <div className="text-5xl font-bold text-brand-text-primary">
+            {totalReports.toLocaleString('es-MX')}
+          </div>
+        )}
         <div className="text-sm text-brand-text-secondary mt-2">
           Reportes totales registrados
         </div>
