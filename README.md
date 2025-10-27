@@ -414,7 +414,7 @@ Reemplace `public/logo.png` con su logo (formato PNG, fondo transparente recomen
 ## 📞 Soporte
 
 Para problemas técnicos o consultas:
-- **Email**: soporte@ofraud.com
+- **Email**: a01665906@tec.mx (Santiago Niño).
 - **Documentación Backend**: http://localhost:3000/docs
 
 ---
@@ -445,4 +445,10 @@ npm run type-check   # Verificar tipos TypeScript
 
 **Versión**: 1.0.0  
 **Autores**: Santiago Niño, Gabriel Gutiérrez, Omar Llano, Alejandro Vargas  
+
+**Materia**: Integración de Seguridad Informática en Redes y Sistemas de Software. 
+
+**Profesores**: Martín Molina, Alejandra Flores, Irvin Mendiola, Olga Escamilla, Andrés Torres, Diogo Burnay.
+
+
 **Última actualización**: 2025
